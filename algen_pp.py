@@ -21,12 +21,14 @@ IMAGES_DIR = "./images_tif"        # pasta onde estão as 69 .tif
 OUTPUT_DIR = "./outputs"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# GA hyperparams (padrões baseados no artigo)
+# GA hyperparams (padrões baseados no artigo, ajustados para melhor diversidade)
 POP_SIZE = 20
 NUM_GENERATIONS = 30
-MUTATION_CHANCE = 0.10          # 10%
-MUTATION_FACTOR_RANGE = (0.85, 1.15)  # ±15%
+MUTATION_CHANCE = 0.20          # 20% (aumentado de 10% para evitar estagnação)
+MUTATION_FACTOR_RANGE = (0.70, 1.30)  # ±30% (aumentado de ±15% para maior exploração)
 ELITISM = 2
+DIVERSITY_REINJECTION_RATE = 0.15  # 15% chance de reintroduzir indivíduo aleatório a cada geração
+DIVERSITY_REINJECTION_STAGNATION = 5  # Reintroduzir diversidade após N gerações sem melhoria
 
 # Seeds / determinismo (opcional)
 RANDOM_SEED = 42
@@ -359,6 +361,10 @@ def crossover_avg(parent_a, parent_b, param_ranges):
     return child
 
 def mutate(ind, param_ranges, chance=MUTATION_CHANCE):
+    """
+    Mutação com chance ajustável e amplitude maior.
+    Quando mutação é ativada, muta ~50% dos genes.
+    """
     if random.random() > chance:
         return ind
     out = ind.copy()
@@ -409,6 +415,7 @@ def run_algen_pp(images, names, save_best=True):
     history = []
     best_global = None
     best_global_fit = float('inf')
+    generations_without_improvement = 0
     for gen in tqdm(range(NUM_GENERATIONS), desc="Gerações", unit="geração"):
         print(f"\n=== Geração {gen+1}/{NUM_GENERATIONS} ===")
         fits = []
@@ -424,11 +431,14 @@ def run_algen_pp(images, names, save_best=True):
         if best_fit < best_global_fit:
             best_global_fit = best_fit
             best_global = best_this.copy()
+            generations_without_improvement = 0
             print(">> Novo best global encontrado")
             # salvar melhor temporariamente
             if save_best:
                 with open(os.path.join(OUTPUT_DIR, "best_individual.pkl"), "wb") as f:
                     pickle.dump(best_global, f)
+        else:
+            generations_without_improvement += 1
         # criar novos indivíduos por crossover (média)
         new_pop = survivors.copy()
         # parear survivors: 1-ultimo, 2-penultimo...
@@ -436,19 +446,45 @@ def run_algen_pp(images, names, save_best=True):
         surv_count = len(survivors)
         # gerar rem novos filhos por cruzamento
         while len(new_pop) < len(population):
-            # pareamento determinístico: i with (surv_count-1-i)
-            i = random.randrange(surv_count)
-            j = surv_count - 1 - i
-            parent_a = survivors[i]
-            parent_b = survivors[j]
-            child = crossover_avg(parent_a, parent_b, PARAM_RANGES)
-            # mutação
-            child = mutate(child, PARAM_RANGES)
-            normalize_weights(child)
-            new_pop.append(child)
-        # elitismo: garantir melhores ELITISM mantidos (substitui piores)
-        # ordenar new_pop por fitness aproximado (não temos fit yet) -> for simplicidade mantemos top survivors inclusion
-        # implementar mutação adicional randomica já incluída
+            # Reintrodução de diversidade: ocasionalmente criar indivíduo aleatório
+            if random.random() < DIVERSITY_REINJECTION_RATE:
+                new_ind = random_individual(PARAM_RANGES)
+                normalize_weights(new_ind)
+                new_pop.append(new_ind)
+            else:
+                # pareamento determinístico: i with (surv_count-1-i)
+                i = random.randrange(surv_count)
+                j = surv_count - 1 - i
+                parent_a = survivors[i]
+                parent_b = survivors[j]
+                child = crossover_avg(parent_a, parent_b, PARAM_RANGES)
+                # mutação
+                child = mutate(child, PARAM_RANGES)
+                normalize_weights(child)
+                new_pop.append(child)
+        
+        # Reintrodução forçada de diversidade após estagnação
+        if generations_without_improvement >= DIVERSITY_REINJECTION_STAGNATION:
+            # Substituir alguns dos piores indivíduos por aleatórios
+            # Ordenar por fitness (usando os fits da geração anterior como referência)
+            # Como não temos os novos fits, vamos substituir alguns aleatórios da parte inferior
+            num_to_replace = max(1, len(new_pop) // 5)  # Substituir ~20% dos piores
+            for _ in range(num_to_replace):
+                # Substituir um dos últimos indivíduos (que são os novos filhos, geralmente piores)
+                replace_idx = random.randint(len(survivors), len(new_pop) - 1)
+                new_pop[replace_idx] = random_individual(PARAM_RANGES)
+                normalize_weights(new_pop[replace_idx])
+            generations_without_improvement = 0  # Reset counter
+            print(f"  [Diversidade] Reintroduzidos {num_to_replace} indivíduos aleatórios após estagnação")
+        
+        # Elitismo: garantir que o melhor global esteja sempre na população
+        # (substituir um dos novos indivíduos, não um survivor)
+        if best_global is not None and len(new_pop) > len(survivors):
+            # Substituir um dos novos indivíduos (não survivors) pelo melhor global
+            # Isso garante que o melhor nunca seja perdido
+            replace_idx = random.randint(len(survivors), len(new_pop) - 1)
+            new_pop[replace_idx] = best_global.copy()
+        
         population = new_pop
         history.append((gen, best_fit, best_this))
     print("\n=== FIM do GA ===")
