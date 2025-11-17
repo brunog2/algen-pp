@@ -396,7 +396,7 @@ Documentação detalhada sobre o artigo original e comparações:
 ## Referências
 
 - **Daguano, E. M. (2020)**: "Algoritmo Genético para Segmentação de Imagens utilizando Tamanho e Forma dos Objetos" - UNICAMP
-  - PDF disponível em `assets/Daguano_EduardoManarin_M.pdf`
+  - Disponível em: https://www.repositorio.unicamp.br/acervo/detalhe/1157726
   - Documentação detalhada em `docs/ARTIGO_DAGUANO.md`
 
 ## Licença
