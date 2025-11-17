@@ -40,12 +40,14 @@ cd algen-pp
 ### 2. Crie e ative um ambiente virtual (recomendado)
 
 **Linux/Mac:**
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
 **Windows:**
+
 ```bash
 python -m venv venv
 venv\Scripts\activate
@@ -58,6 +60,7 @@ pip install -r requirements.txt
 ```
 
 Isso instalará automaticamente:
+
 - `opencv-python` - Processamento de imagens
 - `numpy` - Computação numérica
 - `scikit-image` - Operações avançadas de imagem
@@ -86,24 +89,27 @@ Edite `src/config.py` se quiser ajustar os parâmetros do algoritmo genético:
 
 ```python
 POP_SIZE = 20                    # Tamanho da população (padrão: 20)
-NUM_GENERATIONS = 100            # Número de gerações (padrão: 100)
+NUM_GENERATIONS = 20            # Número de gerações (padrão: 20)
 MUTATION_RATE = 0.50             # Taxa de mutação (padrão: 50%)
 ELITISM = 2                      # Número de melhores preservados (padrão: 2)
 ```
 
 **Para testes rápidos**, você pode reduzir:
+
 - `POP_SIZE = 10`
 - `NUM_GENERATIONS = 20`
 
 ### Passo 3: Execute o projeto
 
 **Método 1: A partir da raiz do projeto**
+
 ```bash
 cd src
 python3 main.py
 ```
 
 **Método 2: Usando Python com caminho absoluto**
+
 ```bash
 python3 src/main.py
 ```
@@ -151,7 +157,8 @@ python3 src/main.py
 └── README.md                      # Este arquivo
 ```
 
-**Nota importante**: 
+**Nota importante**:
+
 - A pasta `venv/` e `outputs/` estão no `.gitignore` e não são versionadas
 - As imagens `.tif` na pasta `images/` podem ser versionadas se necessário (descomente no `.gitignore` se não quiser versionar)
 
@@ -251,11 +258,13 @@ O código está organizado em módulos especializados:
 
 Após a execução, você encontrará em `outputs/`:
 
-- **`outputs/logs/`**: 
+- **`outputs/logs/`**:
+
   - `algen_evolution_YYYYMMDD_HHMMSS.log` - Log completo da execução
   - `algen_history_YYYYMMDD_HHMMSS.json` - Histórico estruturado (fitness, parâmetros por geração)
 
 - **`outputs/generation_results/YYYYMMDD_HHMMSS/`**:
+
   - `generation_01/`, `generation_02/`, ... - Resultados visuais de cada geração
   - Permite visualizar a evolução do algoritmo ao longo das gerações
 
@@ -267,28 +276,34 @@ Após a execução, você encontrará em `outputs/`:
 ## Dicas e Troubleshooting
 
 ### Testes rápidos
+
 Reduza `NUM_GENERATIONS` e `POP_SIZE` em `src/config.py`:
+
 ```python
 POP_SIZE = 10           # Reduzir para testes
-NUM_GENERATIONS = 20    # Reduzir para testes
+NUM_GENERATIONS = 10    # Reduzir para testes
 ```
 
 ### Ajuste de performance
+
 - **Convergência muito rápida**: Aumente `MUTATION_RATE` (ex: 0.70)
 - **Estagnação**: O algoritmo já tem mecanismos anti-estagnação, mas você pode aumentar `DIVERSITY_REINJECTION_RATE`
 
 ### Problemas comuns
 
 **"ERRO: Nenhuma imagem encontrada!"**
+
 - Verifique se a pasta `images/` existe na raiz do projeto
 - Verifique se há arquivos `.tif` na pasta `images/`
 - Verifique os caminhos em `src/config.py` (padrão: `"../images"`)
 
 **Erro de importação de módulos**
+
 - Certifique-se de estar executando de dentro da pasta `src/` ou ajuste os imports
 - Verifique se todas as dependências foram instaladas: `pip install -r requirements.txt`
 
 **Ambiente virtual não ativado**
+
 - Sempre ative o ambiente virtual antes de executar: `source venv/bin/activate`
 
 ## Análise de Resultados
@@ -302,12 +317,14 @@ NUM_GENERATIONS = 20    # Reduzir para testes
 Documentação detalhada sobre o artigo original e comparações:
 
 - **[docs/ARTIGO_DAGUANO.md](docs/ARTIGO_DAGUANO.md)** - Documentação completa sobre:
+
   - Como o algoritmo é aplicado
   - Parâmetros e configurações usados
   - Resultados obtidos no artigo original
   - Comparação com melhorias implementadas no Algen-PP
 
 - **[docs/COMPARACAO_ARTIGO.md](docs/COMPARACAO_ARTIGO.md)** - Comparação detalhada:
+
   - Correções implementadas (gradiente morfológico, etc.)
   - Melhorias além do artigo (detecção de bordas, etc.)
   - Variações necessárias e justificativas

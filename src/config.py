@@ -11,7 +11,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Parâmetros do Algoritmo Genético
 POP_SIZE = 20
-NUM_GENERATIONS = 100
+NUM_GENERATIONS = 20
 MUTATION_RATE = 0.70  # 70% chance de mutação (aumentado de 50%)
 ELITISM = 2
 DIVERSITY_REINJECTION_RATE = 0.30  # 30% chance de criar indivíduo aleatório (aumentado de 20%)
