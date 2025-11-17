@@ -25,46 +25,101 @@ Este projeto implementa um algoritmo genético melhorado baseado no trabalho de 
 
 ## Requisitos
 
-```bash
-pip install opencv-python numpy scikit-image scipy matplotlib tqdm
-```
+- Python 3.8 ou superior
+- Dependências listadas em `requirements.txt`
 
 ## Instalação
 
-1. Clone o repositório
-2. Crie um ambiente virtual (recomendado):
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # ou
-   venv\Scripts\activate  # Windows
-   ```
-3. Instale as dependências:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   (ou instale manualmente os pacotes listados acima)
+### 1. Clone o repositório
 
-## Uso
+```bash
+git clone <url-do-repositorio>
+cd algen-pp
+```
 
-### Execução básica:
+### 2. Crie e ative um ambiente virtual (recomendado)
 
+**Linux/Mac:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+**Windows:**
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+### 3. Instale as dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+Isso instalará automaticamente:
+- `opencv-python` - Processamento de imagens
+- `numpy` - Computação numérica
+- `scikit-image` - Operações avançadas de imagem
+- `scipy` - Ferramentas científicas
+- `matplotlib` - Visualização (opcional)
+- `tqdm` - Barras de progresso
+- `tifffile` - Leitura de arquivos TIFF
+
+## Como Executar
+
+### Passo 1: Prepare suas imagens
+
+Coloque suas imagens `.tif` na pasta `images/` (na raiz do projeto):
+
+```bash
+# A pasta images/ deve conter arquivos .tif
+images/
+  ├── imagem1.tif
+  ├── imagem2.tif
+  └── ...
+```
+
+### Passo 2: (Opcional) Configure os parâmetros do algoritmo
+
+Edite `src/config.py` se quiser ajustar os parâmetros do algoritmo genético:
+
+```python
+POP_SIZE = 20                    # Tamanho da população (padrão: 20)
+NUM_GENERATIONS = 100            # Número de gerações (padrão: 100)
+MUTATION_RATE = 0.50             # Taxa de mutação (padrão: 50%)
+ELITISM = 2                      # Número de melhores preservados (padrão: 2)
+```
+
+**Para testes rápidos**, você pode reduzir:
+- `POP_SIZE = 10`
+- `NUM_GENERATIONS = 20`
+
+### Passo 3: Execute o projeto
+
+**Método 1: A partir da raiz do projeto**
 ```bash
 cd src
 python3 main.py
 ```
 
-### Configuração:
+**Método 2: Usando Python com caminho absoluto**
+```bash
+python3 src/main.py
+```
 
-1. Coloque suas imagens `.tif` na pasta `images/` (na raiz do projeto)
-2. Ajuste os parâmetros do GA no arquivo `src/config.py` se necessário:
-   ```python
-   POP_SIZE = 20                    # Tamanho da população
-   NUM_GENERATIONS = 100            # Número de gerações
-   MUTATION_RATE = 0.50             # Taxa de mutação (50%)
-   ELITISM = 2                      # Número de melhores preservados
-   ```
-3. Execute o algoritmo
+### O que acontece durante a execução
+
+1. O algoritmo carrega todas as imagens `.tif` da pasta `images/`
+2. Inicializa uma população de indivíduos (cada um com parâmetros diferentes)
+3. Executa as gerações do algoritmo genético:
+   - Avalia cada indivíduo (aplica pipeline de segmentação e calcula fitness)
+   - Seleciona os melhores
+   - Aplica crossover e mutação
+   - Cria nova geração
+4. Ao final, salva os melhores resultados em `outputs/`
+
+**Tempo estimado**: Depende do número de gerações e imagens, mas pode levar alguns minutos a horas.
 
 ## Estrutura do Projeto
 
@@ -83,14 +138,22 @@ python3 main.py
 │   ├── ga_runner.py               # Executor do GA
 │   ├── logger_utils.py            # Utilitários de logging
 │   └── results.py                 # Salvamento de resultados
-├── images/                        # Imagens de entrada (.tif)
-├── outputs/                       # Resultados gerados
+├── images/                        # Imagens de entrada (.tif) - criar manualmente
+├── outputs/                       # Resultados gerados (criado automaticamente, no .gitignore)
 │   ├── generation_results/        # Imagens de cada geração
 │   ├── algen_basic_results/       # Resultado final
 │   └── logs/                      # Logs e histórico JSON
+├── venv/                          # Ambiente virtual (não versionado, no .gitignore)
+├── docs/                          # Documentação adicional
+│   └── ARTIGO_DAGUANO.md          # Documentação detalhada do artigo base
+├── requirements.txt               # Dependências do projeto
 ├── .gitignore                     # Arquivos ignorados pelo Git
 └── README.md                      # Este arquivo
 ```
+
+**Nota importante**: 
+- A pasta `venv/` e `outputs/` estão no `.gitignore` e não são versionadas
+- As imagens `.tif` na pasta `images/` podem ser versionadas se necessário (descomente no `.gitignore` se não quiser versionar)
 
 ## Parâmetros Otimizados
 
@@ -184,17 +247,79 @@ O código está organizado em módulos especializados:
 - **results.py**: Salvamento de resultados e visualizações
 - **logger_utils.py**: Sistema de logging
 
-## Dicas
+## Estrutura de Saída
 
-- **Testes rápidos**: Reduza `NUM_GENERATIONS` e `POP_SIZE` em `src/config.py`
-- **Ajuste de mutação**: Se convergir muito rápido, aumente `MUTATION_RATE`
+Após a execução, você encontrará em `outputs/`:
+
+- **`outputs/logs/`**: 
+  - `algen_evolution_YYYYMMDD_HHMMSS.log` - Log completo da execução
+  - `algen_history_YYYYMMDD_HHMMSS.json` - Histórico estruturado (fitness, parâmetros por geração)
+
+- **`outputs/generation_results/YYYYMMDD_HHMMSS/`**:
+  - `generation_01/`, `generation_02/`, ... - Resultados visuais de cada geração
+  - Permite visualizar a evolução do algoritmo ao longo das gerações
+
+- **`outputs/algen_basic_results/final/`**:
+  - `*_segmented.png` - Segmentações binárias finais
+  - `*_comparison.png` - Comparações com contornos
+  - `*_side_by_side.png` - Imagens lado a lado
+
+## Dicas e Troubleshooting
+
+### Testes rápidos
+Reduza `NUM_GENERATIONS` e `POP_SIZE` em `src/config.py`:
+```python
+POP_SIZE = 10           # Reduzir para testes
+NUM_GENERATIONS = 20    # Reduzir para testes
+```
+
+### Ajuste de performance
+- **Convergência muito rápida**: Aumente `MUTATION_RATE` (ex: 0.70)
+- **Estagnação**: O algoritmo já tem mecanismos anti-estagnação, mas você pode aumentar `DIVERSITY_REINJECTION_RATE`
+
+### Problemas comuns
+
+**"ERRO: Nenhuma imagem encontrada!"**
+- Verifique se a pasta `images/` existe na raiz do projeto
+- Verifique se há arquivos `.tif` na pasta `images/`
+- Verifique os caminhos em `src/config.py` (padrão: `"../images"`)
+
+**Erro de importação de módulos**
+- Certifique-se de estar executando de dentro da pasta `src/` ou ajuste os imports
+- Verifique se todas as dependências foram instaladas: `pip install -r requirements.txt`
+
+**Ambiente virtual não ativado**
+- Sempre ative o ambiente virtual antes de executar: `source venv/bin/activate`
+
+## Análise de Resultados
+
 - **Visualização**: Explore as imagens em `outputs/generation_results/` para acompanhar a evolução
-- **Análise**: Use os arquivos JSON em `outputs/logs/` para análise estatística
+- **Análise estatística**: Use os arquivos JSON em `outputs/logs/` para análise de convergência
 - **Comparação**: Compare visualmente as gerações para ver a melhoria da segmentação
+
+## Documentação do Artigo Base
+
+Documentação detalhada sobre o artigo original e comparações:
+
+- **[docs/ARTIGO_DAGUANO.md](docs/ARTIGO_DAGUANO.md)** - Documentação completa sobre:
+  - Como o algoritmo é aplicado
+  - Parâmetros e configurações usados
+  - Resultados obtidos no artigo original
+  - Comparação com melhorias implementadas no Algen-PP
+
+- **[docs/COMPARACAO_ARTIGO.md](docs/COMPARACAO_ARTIGO.md)** - Comparação detalhada:
+  - Correções implementadas (gradiente morfológico, etc.)
+  - Melhorias além do artigo (detecção de bordas, etc.)
+  - Variações necessárias e justificativas
+  - Checklist de validação
+
+- **[CHANGELOG.md](CHANGELOG.md)** - Histórico de mudanças e melhorias
 
 ## Referências
 
 - **Daguano, E. M. (2020)**: "Algoritmo Genético para Segmentação de Imagens utilizando Tamanho e Forma dos Objetos" - UNICAMP
+  - PDF disponível em `assets/Daguano_EduardoManarin_M.pdf`
+  - Documentação detalhada em `docs/ARTIGO_DAGUANO.md`
 
 ## Licença
 

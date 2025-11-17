@@ -1,0 +1,20 @@
+# Algen-PP: Dependências do Projeto
+# Algoritmo Genético para Segmentação de Imagens
+
+# Processamento de Imagens
+opencv-python>=4.8.0
+scikit-image>=0.21.0
+
+# Computação Científica
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Visualização (opcional, para análises)
+matplotlib>=3.7.0
+
+# Utilitários
+tqdm>=4.65.0
+
+# Leitura de arquivos TIFF
+tifffile>=2023.0.0
+

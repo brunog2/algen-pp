@@ -38,25 +38,29 @@ def save_individual_results(individual, images, names, output_dir, generation=No
         
         # Salvar segmentação binária
         base_name = os.path.splitext(name)[0]
-        seg_filename = os.path.join(output_dir, f"{prefix}{base_name}_segmented.png")
-        cv2.imwrite(seg_filename, seg_binary_uint8)
+        # seg_filename = os.path.join(output_dir, f"{prefix}{base_name}_segmented.png")
+        # cv2.imwrite(seg_filename, seg_binary_uint8)
         
-        # Criar imagem comparativa (original + contornos)
+        # Criar imagem comparativa (original + contornos coloridos)
         img_normalized = image_utils.normalize_image_for_display(img)
+        # Converter para BGR (colorido) para desenhar contornos coloridos
         img_colored = cv2.cvtColor(img_normalized, cv2.COLOR_GRAY2BGR)
         
         # Encontrar contornos
         contours, _ = cv2.findContours(seg_binary_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        # Desenhar contornos em verde
-        cv2.drawContours(img_colored, contours, -1, (0, 255, 0), 2)
+        # Desenhar apenas bordas/contornos sem preenchimento interno
+        # Verde brilhante (0, 255, 0) em BGR para melhor visualização
+        if len(contours) > 0:
+            # Desenhar apenas as bordas (sem preenchimento)
+            cv2.drawContours(img_colored, contours, -1, (0, 255, 0), 2)  # Verde brilhante, espessura 2
         
         # Salvar imagem comparativa
         comp_filename = os.path.join(output_dir, f"{prefix}{base_name}_comparison.png")
         cv2.imwrite(comp_filename, img_colored)
         
         # Criar imagem lado a lado (original | segmentada)
-        img_side_by_side = np.hstack([img_normalized, seg_binary_uint8])
-        side_filename = os.path.join(output_dir, f"{prefix}{base_name}_side_by_side.png")
-        cv2.imwrite(side_filename, img_side_by_side)
+        # img_side_by_side = np.hstack([img_normalized, seg_binary_uint8])
+        # side_filename = os.path.join(output_dir, f"{prefix}{base_name}_side_by_side.png")
+        # cv2.imwrite(side_filename, img_side_by_side)
 

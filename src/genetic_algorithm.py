@@ -140,14 +140,16 @@ def crossover(parent_a, parent_b, param_ranges, alpha=0.5):
     return child
 
 
-def mutate(ind, param_ranges, mutation_rate=None):
+def mutate(ind, param_ranges, mutation_rate=None, stagnation_level=0):
     """
-    Mutação melhorada: altera genes com maior amplitude e mais frequência.
+    Mutação melhorada e adaptativa: mais agressiva durante estagnação.
     
     Args:
         ind: Indivíduo a mutar
         param_ranges: Intervalos dos parâmetros
         mutation_rate: Taxa de mutação (usa config.MUTATION_RATE se None)
+        stagnation_level: Nível de estagnação (número de gerações sem melhoria)
+                          Quanto maior, mais agressiva a mutação
     
     Returns:
         Indivíduo mutado
@@ -155,23 +157,52 @@ def mutate(ind, param_ranges, mutation_rate=None):
     if mutation_rate is None:
         mutation_rate = config.MUTATION_RATE
     
-    if random.random() > mutation_rate:
+    # Aumentar taxa de mutação durante estagnação
+    # Base: 70%, +10% por geração de estagnação (até 95%)
+    # CORREÇÃO: Aumentar teto para dominância crítica
+    max_rate = 0.95 if stagnation_level >= 10 else 0.90
+    adaptive_mutation_rate = min(max_rate, mutation_rate + (stagnation_level * 0.10))
+    
+    # CORREÇÃO: Durante dominância crítica, garantir mutação sempre
+    if stagnation_level >= 10:
+        adaptive_mutation_rate = max(0.95, adaptive_mutation_rate)
+    
+    if random.random() > adaptive_mutation_rate:
         return ind
     
     out = ind.copy()
+    
+    # Durante estagnação, mutar mais genes e com maior amplitude
+    # Base: 70% dos genes, +15% por geração de estagnação (até 98%)
+    # CORREÇÃO: Durante dominância crítica, mutar quase todos os genes
+    max_gene_prob = 0.98 if stagnation_level >= 10 else 0.95
+    gene_mutation_prob = min(max_gene_prob, 0.70 + (stagnation_level * 0.15))
+    
+    # Amplitude de mutação também aumenta com estagnação
+    # Base: ±30%, +15% por geração (até ±75% durante dominância crítica)
+    max_amplitude = 0.75 if stagnation_level >= 10 else 0.60
+    mutation_amplitude = min(max_amplitude, 0.30 + (stagnation_level * 0.15))
+    
+    # Chance de reset completo aumenta com estagnação
+    # Base: 30%, +10% por geração (até 85% durante dominância crítica)
+    max_reset = 0.85 if stagnation_level >= 10 else 0.70
+    reset_prob = min(max_reset, 0.30 + (stagnation_level * 0.10))
+    
     for k, (mn, mx, t) in param_ranges.items():
-        if random.random() < 0.7:  # Mutar ~70% dos genes quando mutação ocorre
-            # Mutação mais agressiva: ±30%
-            factor = random.uniform(0.70, 1.30)
+        if random.random() < gene_mutation_prob:  # Mutar genes com probabilidade adaptativa
+            # Mutação mais agressiva baseada em estagnação
+            factor_min = 1.0 - mutation_amplitude
+            factor_max = 1.0 + mutation_amplitude
+            factor = random.uniform(factor_min, factor_max)
             
-            # 30% chance de mutação uniforme (resetar para valor aleatório)
-            if random.random() < 0.3:
+            # Chance aumentada de mutação uniforme (resetar para valor aleatório)
+            if random.random() < reset_prob:
                 if t == 'int':
                     out[k] = random.randint(mn, mx)
                 else:
                     out[k] = random.uniform(mn, mx)
             else:
-                # Mutação por fator
+                # Mutação por fator (mais agressiva durante estagnação)
                 if t == 'int':
                     nv = int(round(out[k] * factor))
                     nv = max(mn, min(mx, nv))

@@ -20,18 +20,27 @@ def segment_image(img, individual):
     Returns:
         tupla: (segmentação binária, fitness)
     """
-    # Pré-processamento
+    # Pré-processamento (usar gradiente morfológico conforme artigo)
+    # Converter parâmetro booleano (0/1) para True/False
+    use_morph_gradient = bool(individual.get('use_morphological_gradient', 1))  # Default: True (artigo)
     pre = preprocessing.preprocess_image(
         img,
         gaussian_sigma=individual['gaussian_sigma'],
         median_ksize=int(individual['median_ksize']),
         erosion_size=int(individual['erosion']),
-        dilation_size=int(individual['dilation'])
+        dilation_size=int(individual['dilation']),
+        use_morphological_gradient=use_morph_gradient
     )
     
-    # Watershed híbrido com intensidade
+    # Watershed híbrido com intensidade e detecção de bordas opcional
     intensity_weight = individual.get('intensity_weight', 0.3)
-    labels = segmentation.watershed_segmentation(pre, intensity_weight=float(intensity_weight))
+    # Converter parâmetro booleano (0/1) para True/False
+    use_edge_detection = bool(individual.get('use_edge_detection', 0))  # Default: False (opcional)
+    labels = segmentation.watershed_segmentation(
+        pre, 
+        intensity_weight=float(intensity_weight),
+        use_edge_detection=use_edge_detection
+    )
     
     # Ajustar constraints de tamanho
     size_min = int(individual['size_min'])
