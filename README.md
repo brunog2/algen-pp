@@ -330,8 +330,6 @@ Documentação detalhada sobre o artigo original e comparações:
   - Variações necessárias e justificativas
   - Checklist de validação
 
-- **[CHANGELOG.md](CHANGELOG.md)** - Histórico de mudanças e melhorias
-
 ## Referências
 
 - **Daguano, E. M. (2020)**: "Algoritmo Genético para Segmentação de Imagens utilizando Tamanho e Forma dos Objetos" - UNICAMP
