@@ -133,9 +133,55 @@ def compute_segmentation_quality(seg_bin):
     return quality_penalty * 1000000  # Escalar para magnitude similar ao Almod
 
 
+def compute_completeness_penalty(orig_img, seg_binary):
+    """
+    Calcula penalidade por segmentação incompleta de células.
+    Detecta áreas claras (células) na imagem original que não foram segmentadas
+    e penaliza baseado na área não coberta.
+    
+    Args:
+        orig_img: Imagem original
+        seg_binary: Segmentação binária (0 ou 1)
+    
+    Returns:
+        Penalidade por incompletude (menor é melhor)
+    """
+    # Normalizar imagem original para 0-1
+    orig_norm = orig_img.astype(np.float32) / 255.0
+    
+    # Encontrar áreas claras (células) na imagem original
+    # Usar threshold adaptativo baseado na mediana + desvio padrão
+    median_intensity = np.median(orig_norm)
+    std_intensity = np.std(orig_norm)
+    # Threshold para detectar células (median + 1.5*std)
+    cell_threshold = median_intensity + 1.5 * std_intensity
+    cell_threshold = max(0.3, min(0.7, cell_threshold))  # Entre 0.3 e 0.7
+    
+    # Máscara de células (áreas claras na imagem original)
+    cell_mask = (orig_norm > cell_threshold).astype(np.uint8)
+    
+    # Área total de células na imagem original
+    total_cell_area = np.sum(cell_mask > 0)
+    
+    if total_cell_area == 0:
+        return 0.0  # Não há células para detectar
+    
+    # Área de células que foi segmentada
+    segmented_cell_area = np.sum((cell_mask > 0) & (seg_binary > 0))
+    
+    # Área de células que NÃO foi segmentada (incompleta)
+    unsegmented_cell_area = total_cell_area - segmented_cell_area
+    
+    # Penalidade proporcional à área não segmentada
+    completeness_ratio = segmented_cell_area / total_cell_area  # 0 a 1, quanto maior melhor
+    incompleteness_penalty = (1.0 - completeness_ratio) * 500000  # Penalidade máxima de 500k se nada segmentado
+    
+    return incompleteness_penalty
+
+
 def compute_fitness(orig_img, seg_binary):
     """
-    Calcula fitness combinada: Almod + qualidade de forma + recompensa por número de células.
+    Calcula fitness combinada: Almod + qualidade de forma + recompensa por número de células + penalidade por incompletude.
     
     Args:
         orig_img: Imagem original
@@ -146,6 +192,9 @@ def compute_fitness(orig_img, seg_binary):
     """
     almod_score = almod_metric(orig_img, seg_binary)
     quality_score = compute_segmentation_quality(seg_binary)
+    
+    # CORREÇÃO CRÍTICA: Penalidade por segmentação incompleta (células parcialmente segmentadas)
+    completeness_penalty = compute_completeness_penalty(orig_img, seg_binary)
     
     # Recompensa por número de células detectadas (favorece mais cobertura)
     labels_final = measure.label(seg_binary, connectivity=2)
@@ -159,9 +208,11 @@ def compute_fitness(orig_img, seg_binary):
         cell_penalty = max(0, 100000 - (num_cells * 1000))
     
     # Combinar com pesos
+    # CORREÇÃO: Adicionar peso para penalidade de incompletude
     fitness = (config.FITNESS_WEIGHT_ALMOD * almod_score + 
                config.FITNESS_WEIGHT_QUALITY * quality_score + 
-               config.FITNESS_WEIGHT_CELLS * cell_penalty)
+               config.FITNESS_WEIGHT_CELLS * cell_penalty +
+               config.FITNESS_WEIGHT_COMPLETENESS * completeness_penalty)
     
     return fitness
 

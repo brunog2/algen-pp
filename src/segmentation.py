@@ -71,34 +71,32 @@ def watershed_segmentation(img_pre, intensity_weight=0.3, use_edge_detection=Fal
     # Marcadores baseados em distance transform
     # MELHORIA: Usar footprint maior para detectar células grandes
     # Footprint de 5x5 detecta melhor células grandes no centro
-    # CORREÇÃO: Usar threshold mais alto para evitar falsos positivos de ruído
+    # CORREÇÃO: Threshold balanceado - não muito alto (perde células) nem muito baixo (detecta ruído)
     max_dist = np.max(dist)
-    # CORREÇÃO: Threshold ainda mais alto para evitar detecção de linhas/ruído
-    dist_threshold = max(4.0, max_dist * 0.25)  # Threshold mínimo de 4 pixels ou 25% do máximo
+    # CORREÇÃO: Threshold mais permissivo para detectar mais células (20% ao invés de 25%)
+    dist_threshold = max(3.0, max_dist * 0.20)  # Threshold mínimo de 3 pixels ou 20% do máximo
     
     coords_dist = feature.peak_local_max(
         dist, 
         footprint=np.ones((5, 5)), 
         labels=bw, 
-        min_distance=4,  # Aumentado de 3 para 4
-        threshold_abs=dist_threshold  # Threshold para evitar ruído
+        min_distance=3,  # Reduzido de 4 para 3 para detectar células próximas
+        threshold_abs=dist_threshold  # Threshold mais permissivo
     )
     local_maxi_dist = np.zeros_like(dist, dtype=bool)
     if len(coords_dist) > 0:
         local_maxi_dist[tuple(coords_dist.T)] = True
     
     # MELHORIA ADICIONAL: Se há poucos marcadores, usar threshold mais baixo
-    # Isso ajuda a detectar células grandes que podem ter menos contrastes locais
-    # MAS apenas se não detectou quase nenhum marcador (para evitar falsos positivos)
-    # CORREÇÃO: Aumentar threshold mínimo do fallback
-    if np.sum(local_maxi_dist) < 2 and max_dist > 8:  # Mais restritivo: < 2 ao invés de < 3, > 8 ao invés de > 5
-        # Tentar com threshold mais baixo e footprint maior para células grandes
+    # CORREÇÃO: Tornar mais permissivo para detectar células escuras ou grandes
+    if np.sum(local_maxi_dist) < 5 and max_dist > 5:  # Mais permissivo: < 5 ao invés de < 2, > 5 ao invés de > 8
+        # Tentar com threshold mais baixo e footprint maior para células grandes/escuras
         coords_dist_large = feature.peak_local_max(
             dist, 
             footprint=np.ones((7, 7)), 
             labels=bw, 
-            min_distance=6,  # Aumentado de 5 para 6
-            threshold_abs=max_dist * 0.18  # Threshold mais baixo (18% do máximo) apenas se necessário
+            min_distance=4,  # Reduzido de 6 para 4
+            threshold_abs=max_dist * 0.15  # Threshold mais baixo (15% do máximo) para detectar mais células
         )
         if len(coords_dist_large) > 0:
             local_maxi_dist[tuple(coords_dist_large.T)] = True
@@ -109,21 +107,23 @@ def watershed_segmentation(img_pre, intensity_weight=0.3, use_edge_detection=Fal
         img_norm = exposure.rescale_intensity(img, out_range=(0, 1)).astype(np.float32)
         
         # Encontrar máximos locais de intensidade (células são mais brilhantes)
-        # MELHORIA: Threshold adaptativo para detectar células grandes com intensidade variável
-        # CORREÇÃO: Verificar se há pixels > 0 antes de calcular percentil
+        # CORREÇÃO: Threshold mais baixo para detectar células escuras também
+        # Usar percentil mais baixo para incluir células menos brilhantes
         pixels_positive = img_norm[img_norm > 0]
         if len(pixels_positive) > 0:
-            intensity_threshold = np.percentile(pixels_positive, 70)  # 70º percentil
-            intensity_threshold = max(0.5, min(0.8, intensity_threshold))  # Entre 0.5 e 0.8
+            # Reduzir de 70º para 50º percentil para incluir células mais escuras
+            intensity_threshold = np.percentile(pixels_positive, 50)  # 50º percentil
+            # Ampliar range: entre 0.3 e 0.7 (antes 0.5-0.8) para detectar células escuras
+            intensity_threshold = max(0.3, min(0.7, intensity_threshold))
         else:
-            # Fallback: usar threshold padrão se não há pixels positivos
-            intensity_threshold = 0.6
+            # Fallback: usar threshold mais baixo se não há pixels positivos
+            intensity_threshold = 0.4  # Reduzido de 0.6
         
         coords_intensity = feature.peak_local_max(
             img_norm, 
             footprint=np.ones((7, 7)),  # Footprint maior para células grandes
-            threshold_abs=intensity_threshold,  # Threshold adaptativo
-            min_distance=7  # Distância mínima maior
+            threshold_abs=intensity_threshold,  # Threshold adaptativo (mais baixo)
+            min_distance=5  # Reduzido de 7 para 5 para detectar células próximas
         )
         local_maxi_intensity = np.zeros_like(img, dtype=bool)
         if len(coords_intensity) > 0:
@@ -131,35 +131,38 @@ def watershed_segmentation(img_pre, intensity_weight=0.3, use_edge_detection=Fal
         
         # Combinar marcadores: distance transform + intensidade
         local_maxi = local_maxi_dist.copy()
-        # Adicionar marcadores de intensidade dentro da máscara binária
+        # CORREÇÃO: Adicionar marcadores de intensidade mesmo que não estejam na máscara binária
+        # Isso ajuda a detectar células escuras que podem ter sido perdidas na binarização
+        local_maxi[local_maxi_intensity] = True
+        # Também adicionar marcadores dentro da máscara binária
         local_maxi[bw & local_maxi_intensity] = True
         
         # MELHORIA: Usar bordas para melhorar marcadores (sempre que possível)
-        # CORREÇÃO: Ser mais seletivo com marcadores baseados em bordas para evitar falsos positivos
-        # CORREÇÃO ADICIONAL: Threshold ainda mais alto para evitar detecção de linhas
-        if edge_mask is not None and np.sum(edge_mask > 0) > 0 and max_dist > 5:  # Aumentado de 3 para 5
+        # CORREÇÃO: Balancear entre detectar células escuras e evitar falsos positivos
+        if edge_mask is not None and np.sum(edge_mask > 0) > 0 and max_dist > 3:  # Reduzido de 5 para 3 para detectar mais células
             # Encontrar máximos locais próximos às bordas (células têm bordas definidas)
             # Usar edge_mask que já foi dilatação das bordas
             # Procurar centros de células dentro das regiões delimitadas por bordas
             if use_edge_detection:
                 # Modo agressivo: mais marcadores baseados em bordas
-                # MAS usar threshold mais alto para evitar falsos positivos
+                # CORREÇÃO: Threshold mais permissivo para detectar células escuras
                 edge_dilated = cv2.dilate(edges.astype(np.uint8), np.ones((9, 9), np.uint8))
                 edge_maxima = feature.peak_local_max(
                     dist,
                     footprint=np.ones((7, 7)),
                     labels=(edge_dilated > 0).astype(bool),
-                    min_distance=6,  # Aumentado de 5 para 6
-                    threshold_abs=max_dist * 0.3  # Threshold ainda mais alto (30% ao invés de 25%)
+                    min_distance=4,  # Reduzido de 6 para 4 para detectar células próximas
+                    threshold_abs=max_dist * 0.2  # Threshold mais permissivo (20% ao invés de 30%)
                 )
             else:
                 # Modo conservador: marcadores mais seletivos baseados em bordas
+                # CORREÇÃO: Threshold um pouco mais permissivo
                 edge_maxima = feature.peak_local_max(
                     dist,
                     footprint=np.ones((5, 5)),
                     labels=(edge_mask > 0).astype(bool),
-                    min_distance=8,  # Aumentado de 7 para 8
-                    threshold_abs=max_dist * 0.4  # Threshold ainda mais alto (40% ao invés de 35%)
+                    min_distance=5,  # Reduzido de 8 para 5
+                    threshold_abs=max_dist * 0.25  # Threshold mais permissivo (25% ao invés de 40%)
                 )
             
             if len(edge_maxima) > 0:
@@ -206,8 +209,7 @@ def select_regions_by_size_shape(labels, size_min, size_max, weight_size, weight
     props = measure.regionprops(labels)
     selected_mask = np.zeros(labels.shape, dtype=np.uint8)
     
-    # CORREÇÃO: Definir margem de borda (regiões próximas às bordas são suspeitas)
-    border_margin = 5  # Pixels das bordas para considerar como "borda"
+    # CORREÇÃO: NÃO filtrar por posição nas bordas - permitir células cortadas
     height, width = labels.shape
     
     for prop in props:
@@ -235,29 +237,9 @@ def select_regions_by_size_shape(labels, size_min, size_max, weight_size, weight
         if is_elongated_line or is_thin_elongated:
             continue  # Descartar linhas artificiais imediatamente
         
-        # CORREÇÃO INTELIGENTE: Filtrar apenas linhas artificiais nas bordas, não células válidas
-        # Uma célula válida que toca borda tem área e forma adequadas
-        # Uma linha artificial é muito fina e alongada ao longo da borda
-        # Verificar se toca bordas
-        touches_top = bbox[0] < border_margin
-        touches_bottom = bbox[2] > (height - border_margin)
-        touches_left = bbox[1] < border_margin
-        touches_right = bbox[3] > (width - border_margin)
-        
-        touches_border = touches_top or touches_bottom or touches_left or touches_right
-        
-        if touches_border:
-            # FILTRO INTELIGENTE: Descarta apenas se for claramente uma linha artificial
-            # Linhas artificiais são muito finas (altura ou largura < 10 pixels) E alongadas
-            # OU são muito pequenas em área mas alongadas ao longo da borda
-            is_thin_line = (min(bbox_height, bbox_width) < 10) and (aspect_ratio > 3.0)
-            is_small_elongated = (area < 50) and (aspect_ratio > 2.5)
-            
-            # Se toca borda E é uma linha artificial, descarta
-            # Mas se é uma célula válida (tem área adequada e forma razoável), mantém
-            if is_thin_line or is_small_elongated:
-                continue  # Descartar apenas linhas artificiais
-            # Caso contrário, mantém a célula mesmo que toque a borda (é uma célula válida cortada)
+        # CORREÇÃO: NÃO rejeitar células que tocam bordas - permitir células cortadas pela metade
+        # Apenas rejeitar linhas artificiais muito óbvias (independente de tocar borda ou não)
+        # Células cortadas nas bordas são válidas e devem ser detectadas
         
         # Score de tamanho (eq 3.1) - MELHORADO para células grandes
         if size_min <= area <= size_max:
@@ -297,17 +279,24 @@ def select_regions_by_size_shape(labels, size_min, size_max, weight_size, weight
         
         # Seleção (threshold configurável)
         # MELHORIA: Threshold adaptativo - mais baixo para células grandes válidas
-        # CORREÇÃO: Tornar seleção mais seletiva para evitar falsos positivos
+        # CORREÇÃO: Tornar threshold mais permissivo para detectar mais células
         threshold = config.ALC_SELECTION_THRESHOLD
+        # CORREÇÃO: Reduzir threshold base para ser mais permissivo
+        threshold = max(0.2, threshold - 0.05)  # Reduzir base de 0.3 para 0.25
+        
         if area > size_max and area <= size_max * 2.0:
-            # Células grandes: usar threshold um pouco mais baixo (0.25 ao invés de 0.3)
-            threshold = max(0.2, threshold - 0.05)
+            # Células grandes: usar threshold ainda mais baixo (0.15 ao invés de 0.2)
+            threshold = max(0.15, threshold - 0.05)
+        elif area >= size_min:
+            # Células dentro do tamanho ideal: manter threshold reduzido
+            threshold = max(0.2, threshold)
         
         # CORREÇÃO ADICIONAL: Se a célula tem forma muito ruim (score_shape muito baixo),
         # mesmo que o score combinado seja alto, pode ser um falso positivo
-        # Rejeitar células com score de forma muito baixo (< 0.3) e área não ideal
-        if score_shape < 0.3 and (area < size_min or area > size_max * 1.5):
-            # Forma muito ruim e tamanho fora do ideal = provável falso positivo
+        # CORREÇÃO: Tornar mais permissivo - só rejeitar se forma MUITO ruim E pequena
+        # Células grandes podem ter forma menos ideal mas ainda serem válidas
+        if score_shape < 0.2 and (area < size_min * 0.8):  # Apenas rejeitar se muito pequena E forma muito ruim
+            # Forma muito ruim e muito pequena = provável falso positivo
             continue
         
         # FILTRO FINAL: Verificação adicional de aspect ratio usando propriedades regionais

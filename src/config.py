@@ -40,9 +40,10 @@ PARAM_RANGES = {
 }
 
 # Pesos da fitness combinada
-FITNESS_WEIGHT_ALMOD = 0.85
+FITNESS_WEIGHT_ALMOD = 0.70  # Reduzido de 0.85 para dar espaço para completude
 FITNESS_WEIGHT_QUALITY = 0.15
 FITNESS_WEIGHT_CELLS = 0.10
+FITNESS_WEIGHT_COMPLETENESS = 0.15  # Novo: penalidade por segmentação incompleta
 
 # Threshold de seleção ALC
 ALC_SELECTION_THRESHOLD = 0.3
