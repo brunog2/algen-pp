@@ -28,16 +28,51 @@ Este projeto implementa um algoritmo genético melhorado baseado no trabalho de 
 - Python 3.8 ou superior
 - Dependências listadas em `requirements.txt`
 
-## Instalação
+## Instalação e Execução Rápida
 
-### 1. Clone o repositório
+### Método Automatizado (Recomendado)
+
+O projeto inclui scripts de automação que detectam Python, criam o ambiente virtual, instalam dependências e executam o projeto automaticamente.
+
+**Linux/Mac:**
+
+```bash
+git clone <url-do-repositorio>
+cd algen-pp
+./run.sh
+```
+
+**Windows:**
+
+```cmd
+git clone <url-do-repositorio>
+cd algen-pp
+run.bat
+```
+
+Os scripts fazem automaticamente:
+1. Detectam Python (3.8+)
+2. Criam ambiente virtual se não existir
+3. Ativam o ambiente virtual
+4. Instalam/atualizam pip
+5. Instalam todas as dependências de `requirements.txt`
+6. Verificam a estrutura do projeto
+7. Executam o algoritmo
+
+**Nota**: Na primeira execução, o script pode levar alguns minutos para instalar todas as dependências.
+
+### Método Manual
+
+Se preferir fazer manualmente ou os scripts não funcionarem:
+
+#### 1. Clone o repositório
 
 ```bash
 git clone <url-do-repositorio>
 cd algen-pp
 ```
 
-### 2. Crie e ative um ambiente virtual (recomendado)
+#### 2. Crie e ative um ambiente virtual (recomendado)
 
 **Linux/Mac:**
 
@@ -53,9 +88,10 @@ python -m venv venv
 venv\Scripts\activate
 ```
 
-### 3. Instale as dependências
+#### 3. Instale as dependências
 
 ```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
@@ -97,21 +133,33 @@ ELITISM = 2                      # Número de melhores preservados (padrão: 2)
 **Para testes rápidos**, você pode reduzir:
 
 - `POP_SIZE = 10`
-- `NUM_GENERATIONS = 20`
+- `NUM_GENERATIONS = 10`
 
 ### Passo 3: Execute o projeto
 
-**Método 1: A partir da raiz do projeto**
+**Método Recomendado: Script de Automação**
 
+**Linux/Mac:**
 ```bash
-cd src
-python3 main.py
+./run.sh
 ```
 
-**Método 2: Usando Python com caminho absoluto**
+**Windows:**
+```cmd
+run.bat
+```
+
+**Método Alternativo: Execução Manual**
+
+Se preferir executar manualmente (após ativar o ambiente virtual):
 
 ```bash
+# A partir da raiz do projeto
 python3 src/main.py
+
+# Ou, se estiver dentro de src/
+cd src
+python3 main.py
 ```
 
 ### O que acontece durante a execução
@@ -153,6 +201,8 @@ python3 src/main.py
 ├── docs/                          # Documentação adicional
 │   └── ARTIGO_DAGUANO.md          # Documentação detalhada do artigo base
 ├── requirements.txt               # Dependências do projeto
+├── run.sh                         # Script de automação (Linux/Mac)
+├── run.bat                        # Script de automação (Windows)
 ├── .gitignore                     # Arquivos ignorados pelo Git
 └── README.md                      # Este arquivo
 ```
@@ -301,10 +351,23 @@ NUM_GENERATIONS = 10    # Reduzir para testes
 
 - Certifique-se de estar executando de dentro da pasta `src/` ou ajuste os imports
 - Verifique se todas as dependências foram instaladas: `pip install -r requirements.txt`
+- Use os scripts `run.sh` ou `run.bat` que fazem isso automaticamente
 
 **Ambiente virtual não ativado**
 
-- Sempre ative o ambiente virtual antes de executar: `source venv/bin/activate`
+- Sempre ative o ambiente virtual antes de executar: `source venv/bin/activate` (Linux/Mac) ou `venv\Scripts\activate` (Windows)
+- Ou use os scripts de automação que fazem isso automaticamente
+
+**Script não executa (Linux/Mac)**
+
+- Dê permissão de execução: `chmod +x run.sh`
+- Execute com: `./run.sh`
+
+**Python não encontrado**
+
+- Instale Python 3.8 ou superior
+- Certifique-se de que Python está no PATH do sistema
+- No Linux/Mac, tente `python3` em vez de `python`
 
 ## Análise de Resultados
 

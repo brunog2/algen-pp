@@ -394,18 +394,18 @@ Os resultados do artigo validam que:
 
 O trabalho de Daguano (2020) estabelece uma base sólida para segmentação de imagens de células utilizando:
 
-- ✅ Árvore dos Lagos Críticos como estrutura representativa
-- ✅ Métricas baseadas em tamanho e forma (curvatura elíptica)
-- ✅ Algoritmo genético para otimização automática
-- ✅ Alta estabilidade e bons resultados (F-Score médio 73-86%)
+- Árvore dos Lagos Críticos como estrutura representativa
+- Métricas baseadas em tamanho e forma (curvatura elíptica)
+- Algoritmo genético para otimização automática
+- Alta estabilidade e bons resultados (F-Score médio 73-86%)
 
 O projeto **Algen-PP** expande este trabalho com:
 
-- ✅ Melhorias no watershed (híbrido)
-- ✅ Fitness combinada (Almod + qualidade de forma)
-- ✅ Mecanismos anti-estagnação
-- ✅ Maior número de parâmetros otimizados
-- ✅ Pós-processamento adaptativo
+- Melhorias no watershed (híbrido)
+- Fitness combinada (Almod + qualidade de forma)
+- Mecanismos anti-estagnação
+- Maior número de parâmetros otimizados
+- Pós-processamento adaptativo
 
 ---
 
